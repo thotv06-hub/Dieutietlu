@@ -90,10 +90,9 @@ if 'calculated' not in st.session_state:
     st.session_state['calculated'] = False
 
 # ==========================================
-# XÁC THỰC MẬT KHẨU (THÊM MỚI, GIỮ NGUYÊN MỌI CODE KHÁC)
+# XÁC THỰC MẬT KHẨU
 # ==========================================
 def check_password():
-    """Kiểm tra mật khẩu truy cập"""
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
     
@@ -110,7 +109,7 @@ def check_password():
                     st.error("Mật khẩu không chính xác!")
         st.stop()
 
-check_password()   # <--- Gọi kiểm tra, nếu chưa đăng nhập sẽ dừng tại đây
+check_password()
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -120,21 +119,20 @@ with st.sidebar:
     st.markdown("---")
     
     st.markdown("### ⚙️ 1. THÔNG SỐ CÔNG TRÌNH")
-    Z_nguong = st.number_input("Cao trình ngưỡng tràn (m)", value=552.70, step=0.1, format="%.2f")
-    B_tran = st.number_input("Tổng bề rộng tràn B (m)", value=8.00, step=1.0, format="%.2f")
-    m_heso = st.number_input("Hệ số lưu lượng m", value=0.399, step=0.001, format="%.3f")
-    epsilon = st.number_input("Hệ số co hẹp epsilon (ε)", value=1.00, step=0.01, format="%.2f")
-    sigma_n = st.number_input("Hệ số chảy ngập (σn)", value=1.00, step=0.01, format="%.2f")
+    Z_nguong = st.number_input("Cao trình ngưỡng tràn (m)", value=552.700, step=0.1, format="%.3f")
+    B_tran = st.number_input("Tổng bề rộng tràn B (m)", value=8.000, step=1.0, format="%.3f")
+    m_heso = st.number_input("Hệ số lưu lượng m", value=0.420, step=0.001, format="%.3f")
+    epsilon = st.number_input("Hệ số co hẹp epsilon (ε)", value=0.950, step=0.01, format="%.3f")
+    sigma_n = st.number_input("Hệ số chảy ngập (σn)", value=1.000, step=0.01, format="%.3f")
     
-    # Ẩn hiện thông minh
     if loai_tran == "Có cửa van":
-        a_max = st.number_input("Chiều cao cửa van a_max (m)", value=4.00, step=0.1, format="%.2f")
+        a_max = st.number_input("Chiều cao cửa van a_max (m)", value=4.000, step=0.1, format="%.3f")
     else:
         a_max = 0.0 
         
     st.markdown("### ⏱️ 2. THÔNG SỐ VẬN HÀNH")
-    Z_mndbt = st.number_input("Mực nước dâng bình thường (MNDBT)", value=556.70, step=0.1, format="%.2f")
-    Z_bd = st.number_input("Mực nước hồ bắt đầu đón lũ (m)", value=556.70, step=0.1, format="%.2f")
+    Z_mndbt = st.number_input("Mực nước dâng bình thường (MNDBT)", value=556.700, step=0.1, format="%.3f")
+    Z_bd = st.number_input("Mực nước hồ bắt đầu đón lũ (m)", value=556.700, step=0.1, format="%.3f")
     dt_phut = st.number_input("Thời đoạn tính toán dt (phút)", value=30, step=10)
     dt_sec = dt_phut * 60
 
@@ -175,7 +173,7 @@ def tinh_toan_puls(df_qin, df_zv, Z_bd, Z_mndbt, dt_sec, loai_tran, a_max):
     
     Z_max_bang1 = max(Z_bd, Z_mndbt) + 6.0
     Z_start = min(Z_bd, Z_mndbt)
-    Z_gt_arr = np.round(np.arange(Z_start, Z_max_bang1 + 0.1, 0.2), 2)
+    Z_gt_arr = np.round(np.arange(Z_start, Z_max_bang1 + 0.1, 0.2), 3)
     
     bang1_data = []
     for i, z in enumerate(Z_gt_arr):
@@ -263,9 +261,9 @@ def tinh_toan_puls(df_qin, df_zv, Z_bd, Z_mndbt, dt_sec, loai_tran, a_max):
                         alpha_gt = alpha_tt
                     if a_calc > a_max: a_calc = a_max
             a_van_list.append(a_calc)
-        df_bang2["Độ mở e (m)"] = a_van_list
+        df_bang2["Độ mở a (m)"] = a_van_list
         
-        Z_range = np.round(np.arange(Z_start, Z_max_bang1 + 0.2, 0.2), 2)
+        Z_range = np.round(np.arange(Z_start, Z_max_bang1 + 0.2, 0.2), 3)
         a_steps = np.arange(0.5, a_max + 0.5, 0.5)
         qza_data = {"Z (m)": Z_range}
         q_tudo_list = []
@@ -288,7 +286,7 @@ def tinh_toan_puls(df_qin, df_zv, Z_bd, Z_mndbt, dt_sec, loai_tran, a_max):
                     Q_lo = alpha_tt * epsilon * B_tran * a_val * np.sqrt(2 * g * H)
                     Q_thuc_te = min(Q_lo, Q_tudo) 
                     q_col.append(Q_thuc_te)
-            qza_data[f"e = {a_val}m"] = q_col
+            qza_data[f"a = {a_val}m"] = q_col
         df_qza = pd.DataFrame(qza_data)
 
     return df_bang1, df_bang2, df_qza
@@ -304,7 +302,7 @@ def tao_file_excel(df_b1, df_b2, df_qza, loai_tran):
     z_dense = PchipInterpolator(T_arr, df_b2["Zsc (m)"].to_numpy(dtype=float))(T_dense)
     chart_dict = {"T": T_dense, "Qin": qin_dense, "Qout": qout_dense, "Z": z_dense}
     if loai_tran == "Có cửa van":
-        chart_dict["e"] = PchipInterpolator(T_arr, df_b2["Độ mở e (m)"].to_numpy(dtype=float))(T_dense) 
+        chart_dict["a"] = PchipInterpolator(T_arr, df_b2["Độ mở a (m)"].to_numpy(dtype=float))(T_dense) 
     df_chart_data = pd.DataFrame(chart_dict)
     
     df_b1.to_excel(writer, sheet_name='Bang_1_Phu_Tro', index=False, header=False, startrow=1)
@@ -319,7 +317,7 @@ def tao_file_excel(df_b1, df_b2, df_qza, loai_tran):
     ws_chart.hide() 
     
     header_format = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'valign': 'vcenter', 'bg_color': '#D9E1F2', 'text_wrap': True})
-    data_format = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter', 'num_format': '#,##0.00'})
+    data_format = workbook.add_format({'border': 1, 'align': 'center', 'valign': 'vcenter', 'num_format': '#,##0.000'})
     
     for col_num, value in enumerate(df_b1.columns.values): ws1.write(0, col_num, value, header_format)
     for row in range(len(df_b1)):
@@ -337,11 +335,12 @@ def tao_file_excel(df_b1, df_b2, df_qza, loai_tran):
     
     chart1 = workbook.add_chart({'type': 'scatter', 'subtype': 'smooth'})
     max_row1 = len(df_b1)
-    chart1.add_series({'name': 'Đường f1', 'categories': ['Bang_1_Phu_Tro', 1, 0, max_row1, 0], 'values': ['Bang_1_Phu_Tro', 1, 6, max_row1, 6], 'line': {'color': '#0070C0', 'width': 2.5}})
-    chart1.add_series({'name': 'Đường f2', 'categories': ['Bang_1_Phu_Tro', 1, 0, max_row1, 0], 'values': ['Bang_1_Phu_Tro', 1, 7, max_row1, 7], 'line': {'color': '#FF0000', 'width': 2.5}})
-    chart1.set_title({'name': 'BIỂU ĐỒ PHỤ TRỢ Z ~ f1, f2', 'name_font': {'size': 14, 'bold': True}})
-    chart1.set_x_axis({'name': 'Số thứ tự (TT)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
-    chart1.set_y_axis({'name': 'Lưu lượng f1, f2 (m³/s)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
+    # TRỤC X LẤY THEO CỘT Z (Chỉ mục 1)
+    chart1.add_series({'name': 'Đường F1', 'categories': ['Bang_1_Phu_Tro', 1, 1, max_row1, 1], 'values': ['Bang_1_Phu_Tro', 1, 6, max_row1, 6], 'line': {'color': '#0070C0', 'width': 2.5}})
+    chart1.add_series({'name': 'Đường F2', 'categories': ['Bang_1_Phu_Tro', 1, 1, max_row1, 1], 'values': ['Bang_1_Phu_Tro', 1, 7, max_row1, 7], 'line': {'color': '#FF0000', 'width': 2.5}})
+    chart1.set_title({'name': 'BIỂU ĐỒ PHỤ TRỢ Z ~ F1, F2', 'name_font': {'size': 14, 'bold': True}})
+    chart1.set_x_axis({'name': 'Cao trình Z (m)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
+    chart1.set_y_axis({'name': 'Lưu lượng F1, F2 (m³/s)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
     chart1.set_legend({'position': 'bottom'})
     chart1.set_size({'width': 800, 'height': 500})
     ws1.insert_chart('J2', chart1)
@@ -370,10 +369,10 @@ def tao_file_excel(df_b1, df_b2, df_qza, loai_tran):
         ws3.set_column('A:K', 14)
         
         chart3 = workbook.add_chart({'type': 'scatter', 'subtype': 'smooth'})
-        chart3.add_series({'name': 'Độ mở cửa van (e)', 'categories': ['Data_Bieu_Do', 1, 0, 300, 0], 'values': ['Data_Bieu_Do', 1, 4, 300, 4], 'line': {'color': '#8B4513', 'width': 2.5}})
+        chart3.add_series({'name': 'Độ mở cửa van (a)', 'categories': ['Data_Bieu_Do', 1, 0, 300, 0], 'values': ['Data_Bieu_Do', 1, 4, 300, 4], 'line': {'color': '#8B4513', 'width': 2.5}})
         chart3.set_title({'name': 'BIỂU ĐỒ QUÁ TRÌNH ĐỘ MỞ CỬA VAN', 'name_font': {'size': 14, 'bold': True}})
         chart3.set_x_axis({'name': 'Thời gian (Giờ)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
-        chart3.set_y_axis({'name': 'Độ mở e (m)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
+        chart3.set_y_axis({'name': 'Độ mở a (m)', 'major_gridlines': {'visible': True, 'line': {'color': '#D9D9D9', 'dash_type': 'dash'}}})
         chart3.set_legend({'position': 'bottom'})
         chart3.set_size({'width': 800, 'height': 350})
         ws2.insert_chart('N26', chart3)
@@ -394,11 +393,11 @@ def tao_file_excel(df_b1, df_b2, df_qza, loai_tran):
     writer.close()
     return output.getvalue()
 
+
 # =========================================================
 # VÙNG ANIMATION TOÀN MÀN HÌNH (GÓI GỌN 1 HÀNG + TẮT BẰNG ESC)
 # =========================================================
 if st.session_state['animating']:
-    # CHỈ ép CSS ẩn bóng ma khi đang ở chế độ Animation
     st.markdown("""
         <style>
         [data-testid="stSidebar"] {display: none !important;}
@@ -446,10 +445,10 @@ if st.session_state['animating']:
         loai_tran_cache = res['loai_tran_cache']
         a_max_cache = res['a_max_cache']
         
-        STT_arr1 = df_b1["TT"].to_numpy()
-        STT_smooth1 = np.linspace(STT_arr1.min(), STT_arr1.max(), 300)
-        f1_smooth = PchipInterpolator(STT_arr1, df_b1["f1 (m³/s)"].to_numpy())(STT_smooth1)
-        f2_smooth = PchipInterpolator(STT_arr1, df_b1["f2 (m³/s)"].to_numpy())(STT_smooth1)
+        Z_arr1 = df_b1["Zgt (m)"].to_numpy()
+        Z_smooth1 = np.linspace(Z_arr1.min(), Z_arr1.max(), 300)
+        f1_smooth = PchipInterpolator(Z_arr1, df_b1["f1 (m³/s)"].to_numpy())(Z_smooth1)
+        f2_smooth = PchipInterpolator(Z_arr1, df_b1["f2 (m³/s)"].to_numpy())(Z_smooth1)
         
         T_arr = df_b2["T (giờ)"].to_numpy()
         T_smooth2 = np.linspace(T_arr.min(), T_arr.max(), 300)
@@ -458,9 +457,9 @@ if st.session_state['animating']:
         zsc_smooth = PchipInterpolator(T_arr, df_b2["Zsc (m)"].to_numpy())(T_smooth2)
         
         if loai_tran_cache == "Có cửa van":
-            e_smooth = PchipInterpolator(T_arr, df_b2["Độ mở e (m)"].to_numpy())(T_smooth2)
+            a_smooth = PchipInterpolator(T_arr, df_b2["Độ mở a (m)"].to_numpy())(T_smooth2)
             
-        x1_min, x1_max = STT_smooth1.min(), STT_smooth1.max()
+        x1_min, x1_max = Z_smooth1.min(), Z_smooth1.max()
         y1_max = max(f1_smooth.max(), f2_smooth.max()) * 1.1
         x2_min, x2_max = T_smooth2.min(), T_smooth2.max()
         y2_max = max(qin_smooth.max(), qout_smooth.max()) * 1.1
@@ -479,11 +478,11 @@ if st.session_state['animating']:
             else:
                 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 4.2))
 
-            ax1.plot(STT_smooth1[:idx], f1_smooth[:idx], color='#0070C0', label='Đường f1', linewidth=2.5)
-            ax1.plot(STT_smooth1[:idx], f2_smooth[:idx], color='#FF0000', label='Đường f2', linewidth=2.5)
-            ax1.set_title('BIỂU ĐỒ PHỤ TRỢ Z ~ f1, f2', fontsize=12, fontweight='bold', color='#0F4C81')
-            ax1.set_xlabel('Số thứ tự (TT)', fontweight='bold')
-            ax1.set_ylabel('Lưu lượng f1, f2 (m³/s)', fontweight='bold')
+            ax1.plot(Z_smooth1[:idx], f1_smooth[:idx], color='#0070C0', label='Đường F1', linewidth=2.5)
+            ax1.plot(Z_smooth1[:idx], f2_smooth[:idx], color='#FF0000', label='Đường F2', linewidth=2.5)
+            ax1.set_title('BIỂU ĐỒ PHỤ TRỢ Z ~ F1, F2', fontsize=12, fontweight='bold', color='#0F4C81')
+            ax1.set_xlabel('Cao trình Z (m)', fontweight='bold')
+            ax1.set_ylabel('Lưu lượng F1, F2 (m³/s)', fontweight='bold')
             ax1.set_xlim(x1_min, x1_max)
             ax1.set_ylim(0, y1_max) 
             ax1.legend(loc='lower right', frameon=True, shadow=True)
@@ -507,10 +506,10 @@ if st.session_state['animating']:
             ax2.legend(lines + lines2, labels + labels2, loc='upper right', frameon=True, shadow=True, handlelength=3)
             
             if loai_tran_cache == "Có cửa van":
-                ax_a.plot(T_smooth2[:idx], e_smooth[:idx], color='#8B4513', linewidth=2.5, label='Độ mở van (e)')
+                ax_a.plot(T_smooth2[:idx], a_smooth[:idx], color='#8B4513', linewidth=2.5, label='Độ mở van (a)')
                 ax_a.set_title('BIỂU ĐỒ QUÁ TRÌNH ĐỘ MỞ CỬA VAN', fontsize=12, fontweight='bold', color='#0F4C81')
                 ax_a.set_xlabel('Thời gian (Giờ)', fontweight='bold')
-                ax_a.set_ylabel('Độ mở e (m)', fontweight='bold')
+                ax_a.set_ylabel('Độ mở a (m)', fontweight='bold')
                 ax_a.set_xlim(x2_min, x2_max) 
                 ax_a.set_ylim(0, a_max_cache + 0.5) 
                 ax_a.grid(True, linestyle='--', alpha=0.7)
@@ -537,12 +536,52 @@ else:
         st.markdown('<div class="input-box">', unsafe_allow_html=True)
         st.markdown("<h5 style='color:#0F4C81; text-align: center; margin-bottom: 15px;'>📋 BẢNG QUAN HỆ Z - F - V LÒNG HỒ</h5>", unsafe_allow_html=True)
         df_zv_input = st.data_editor(sample_zv, num_rows="dynamic", use_container_width=True, height=250)
+        
+        # Bổ sung biểu đồ Z~F~V (Trục Z ngang, F dọc trái, V dọc phải)
+        df_clean_zv = clean_data(df_zv_input)
+        if not df_clean_zv.empty:
+            fig_zv, ax_f = plt.subplots(figsize=(7, 4))
+            
+            # Vẽ đường F (trục Y bên trái)
+            color_f = '#00B050' # Màu xanh lá
+            ax_f.plot(df_clean_zv["Z (m)"], df_clean_zv["F (ha)"], color=color_f, linewidth=2.5, label='F')
+            ax_f.set_xlabel("Z (m)", fontweight='bold')
+            ax_f.set_ylabel("F (ha)", fontweight='bold')
+            ax_f.grid(True, linestyle='--', alpha=0.7, axis='both')
+            
+            # Vẽ đường V (trục Y bên phải)
+            ax_v = ax_f.twinx()
+            color_v = '#FF0000' # Màu đỏ
+            ax_v.plot(df_clean_zv["Z (m)"], df_clean_zv["V (10^6 m3)"], color=color_v, linewidth=2.5, label='V')
+            ax_v.set_ylabel("V (10⁶ m³)", fontweight='bold')
+            
+            plt.title("ĐƯỜNG QUAN HỆ Z-F-V", fontweight='bold', y=1.05)
+            
+            # Gom chung Legend
+            lines_1, labels_1 = ax_f.get_legend_handles_labels()
+            lines_2, labels_2 = ax_v.get_legend_handles_labels()
+            ax_f.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper center', bbox_to_anchor=(0.5, 0.95), ncol=2, frameon=False)
+            
+            st.pyplot(fig_zv)
+            
         st.markdown('</div>', unsafe_allow_html=True)
         
     with c2:
         st.markdown('<div class="input-box">', unsafe_allow_html=True)
         st.markdown("<h5 style='color:#0F4C81; text-align: center; margin-bottom: 15px;'>🌧️ QUÁ TRÌNH LŨ ĐẾN (Q ~ T)</h5>", unsafe_allow_html=True)
         df_qin_input = st.data_editor(sample_qin, num_rows="dynamic", use_container_width=True, height=250)
+        
+        # Bổ sung biểu đồ Q~T
+        df_clean_qin = clean_data(df_qin_input)
+        if not df_clean_qin.empty:
+            fig_qt, ax_qt = plt.subplots(figsize=(7, 4))
+            ax_qt.plot(df_clean_qin["Time (h)"], df_clean_qin["Qin (m3/s)"], color='#FF0000', linewidth=2.5)
+            ax_qt.set_xlabel("Thời gian T (giờ)", fontweight='bold')
+            ax_qt.set_ylabel("Lũ đến Qin (m³/s)", fontweight='bold')
+            ax_qt.set_title("ĐƯỜNG QUÁ TRÌNH LŨ", fontweight='bold', y=1.05)
+            ax_qt.grid(True, linestyle='--', alpha=0.7)
+            st.pyplot(fig_qt)
+            
         st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
@@ -577,26 +616,26 @@ else:
         st.markdown("<br>", unsafe_allow_html=True)
         
         if loai_tran_cache == "Có cửa van":
-            tab_list = st.tabs(["📑 BẢNG 1: PHỤ TRỢ F1,F2 ", "📑 BẢNG 2: ĐIỀU TIẾT LŨ ", "📖 BẢNG 3: TRA QUAN HỆ (Z-Q-e)", "📈 BIỂU ĐỒ "])
+            tab_list = st.tabs(["📑 BẢNG 1: PHỤ TRỢ F1,F2 ", "📑 BẢNG 2: ĐIỀU TIẾT LŨ ", "📖 BẢNG 3: TRA QUAN HỆ (Z-Q-a)", "📈 BIỂU ĐỒ "])
             t_b1, t_b2, t_b3, t_b4 = tab_list[0], tab_list[1], tab_list[2], tab_list[3]
         else:
             tab_list = st.tabs(["📑 BẢNG 1: PHỤ TRỢ F1,F2 ", "📑 BẢNG 2: ĐIỀU TIẾT LŨ ", "📈 BIỂU ĐỒ "])
             t_b1, t_b2, t_b4 = tab_list[0], tab_list[1], tab_list[2]
         
         with t_b1:
-            st.dataframe(df_b1.style.format({"Zgt (m)": "{:.2f}", "Htr (m)": "{:.2f}", "q_xa (m³/s)": "{:.2f}", "V_ho (10⁶m³)": "{:.3f}", "V_pl (10⁶m³)": "{:.3f}", "f1 (m³/s)": "{:.2f}", "f2 (m³/s)": "{:.2f}"}), use_container_width=True, height=500)
+            fmt_b1 = {col: "{:.0f}" if col == "TT" else "{:.3f}" for col in df_b1.columns}
+            st.dataframe(df_b1.style.format(fmt_b1, na_rep=""), use_container_width=True, height=500)
             
         with t_b2:
-            if loai_tran_cache == "Có cửa van":
-                styled_b2 = df_b2.style.format({"T (giờ)": "{:.2f}", "Q~T (m³/s)": "{:.2f}", "Qtb (m³/s)": "{:.2f}", "q_dau (m³/s)": "{:.2f}", "f1 (m³/s)": "{:.2f}", "f2 (m³/s)": "{:.2f}", "q_cuoi (m³/s)": "{:.2f}", "Htr (m)": "{:.3f}", "Zsc (m)": "{:.2f}", "V_ho (10⁶m³)": "{:.3f}", "Vsc (10⁶m³)": "{:.3f}", "Độ mở e (m)": "{:.2f}"}, na_rep="").highlight_max(subset=["Q~T (m³/s)", "q_cuoi (m³/s)", "Zsc (m)"], color='#DBEAFE')
-            else:
-                styled_b2 = df_b2.style.format({"T (giờ)": "{:.2f}", "Q~T (m³/s)": "{:.2f}", "Qtb (m³/s)": "{:.2f}", "q_dau (m³/s)": "{:.2f}", "f1 (m³/s)": "{:.2f}", "f2 (m³/s)": "{:.2f}", "q_cuoi (m³/s)": "{:.2f}", "Htr (m)": "{:.3f}", "Zsc (m)": "{:.2f}", "V_ho (10⁶m³)": "{:.3f}", "Vsc (10⁶m³)": "{:.3f}"}, na_rep="").highlight_max(subset=["Q~T (m³/s)", "q_cuoi (m³/s)", "Zsc (m)"], color='#DBEAFE')
+            fmt_b2 = {col: "{:.3f}" for col in df_b2.columns}
+            styled_b2 = df_b2.style.format(fmt_b2, na_rep="").highlight_max(subset=["Q~T (m³/s)", "q_cuoi (m³/s)", "Zsc (m)"], color='#DBEAFE')
             st.dataframe(styled_b2, use_container_width=True, height=600)
             
         if loai_tran_cache == "Có cửa van":
             with t_b3:
-                st.markdown("<h5 style='color: #334155;'>BẢNG TRA CỨU LƯU LƯỢNG (Q) THEO ĐỘ MỞ VAN (e) VÀ MỰC NƯỚC (Z)</h5>", unsafe_allow_html=True)
-                st.dataframe(df_qza.style.format("{:.2f}"), use_container_width=True, height=500)
+                st.markdown("<h5 style='color: #334155;'>BẢNG TRA LƯU LƯỢNG (Q) THEO ĐỘ MỞ VAN (a) VÀ MỰC NƯỚC (Z)</h5>", unsafe_allow_html=True)
+                fmt_qza = {col: "{:.3f}" for col in df_qza.columns}
+                st.dataframe(df_qza.style.format(fmt_qza, na_rep=""), use_container_width=True, height=500)
                 
                 st.markdown("<h4 style='text-align: center; margin-top: 30px; color:#0F4C81;'>QUAN HỆ GIỮA LƯU LƯỢNG VÀ MỰC NƯỚC HỒ THEO ĐỘ MỞ CỬA VAN</h4>", unsafe_allow_html=True)
                 fig4, ax4 = plt.subplots(figsize=(10, 6))
@@ -619,13 +658,13 @@ else:
             
             col_chart1, col_chart2 = st.columns(2)
             with col_chart1:
-                st.markdown("<h4 style='text-align: center; color:#0F4C81;'>BIỂU ĐỒ PHỤ TRỢ F1, F2</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='text-align: center; color:#0F4C81;'>BIỂU ĐỒ PHỤ TRỢ Z ~ F1, F2</h4>", unsafe_allow_html=True)
                 fig1, ax1 = plt.subplots(figsize=(7, 6))
-                STT_arr1 = df_b1["TT"].to_numpy()
-                STT_smooth1 = np.linspace(STT_arr1.min(), STT_arr1.max(), 300)
-                ax1.plot(STT_smooth1, PchipInterpolator(STT_arr1, df_b1["f1 (m³/s)"].to_numpy())(STT_smooth1), color='#0070C0', label='Đường F1', linewidth=2.5)
-                ax1.plot(STT_smooth1, PchipInterpolator(STT_arr1, df_b1["f2 (m³/s)"].to_numpy())(STT_smooth1), color='#FF0000', label='Đường F2', linewidth=2.5)
-                ax1.set_xlabel('Số thứ tự (TT)', fontweight='bold')
+                Z_arr1 = df_b1["Zgt (m)"].to_numpy()
+                Z_smooth1 = np.linspace(Z_arr1.min(), Z_arr1.max(), 300)
+                ax1.plot(Z_smooth1, PchipInterpolator(Z_arr1, df_b1["f1 (m³/s)"].to_numpy())(Z_smooth1), color='#0070C0', label='Đường F1', linewidth=2.5)
+                ax1.plot(Z_smooth1, PchipInterpolator(Z_arr1, df_b1["f2 (m³/s)"].to_numpy())(Z_smooth1), color='#FF0000', label='Đường F2', linewidth=2.5)
+                ax1.set_xlabel('Cao trình Z (m)', fontweight='bold')
                 ax1.set_ylabel('Lưu lượng F1, F2 (m³/s)', fontweight='bold')
                 ax1.legend(loc='lower right', frameon=True, shadow=True)
                 ax1.grid(True, linestyle='--', alpha=0.7)
@@ -660,9 +699,9 @@ else:
             if loai_tran_cache == "Có cửa van":
                 st.markdown("<h4 style='text-align: center; margin-top: 40px; color:#0F4C81;'>BIỂU ĐỒ QUÁ TRÌNH ĐỘ MỞ CỬA VAN</h4>", unsafe_allow_html=True)
                 fig3, ax_a = plt.subplots(figsize=(14, 4))
-                ax_a.plot(T_smooth2, PchipInterpolator(T_arr, df_b2["Độ mở e (m)"].to_numpy())(T_smooth2), color='#8B4513', linewidth=2.5, label='Độ mở van (e)')
+                ax_a.plot(T_smooth2, PchipInterpolator(T_arr, df_b2["Độ mở a (m)"].to_numpy())(T_smooth2), color='#8B4513', linewidth=2.5, label='Độ mở van (a)')
                 ax_a.set_xlabel('Thời gian (Giờ)', fontweight='bold')
-                ax_a.set_ylabel('Độ mở e (m)', fontweight='bold')
+                ax_a.set_ylabel('Độ mở a (m)', fontweight='bold')
                 ax_a.set_ylim(bottom=0, top=res['a_max_cache'] + 0.5)
                 ax_a.grid(True, linestyle='--', alpha=0.7)
                 ax_a.legend(loc='upper right', frameon=True, shadow=True)
@@ -674,8 +713,8 @@ else:
             st.markdown("<div style='background-color: #F8FAFC; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0;'>", unsafe_allow_html=True)
             st.markdown("<h3 style='text-align: center; color:#1E3A8A; margin-bottom: 20px;'>🏆 BẢNG TỔNG HỢP</h3>", unsafe_allow_html=True)
             m1, m2 = st.columns(2)
-            m1.metric("🌊 Mực nước lớn nhất (Zsc_max)", f"{df_b2['Zsc (m)'].max():.2f} m")
-            m1.metric("📏 Cột nước tràn lớn nhất (Htr_max)", f"{df_b2['Htr (m)'].max():.2f} m")
-            m2.metric("🌪️ Lưu lượng xả lớn nhất (Qxả_max)", f"{df_b2['q_cuoi (m³/s)'].max():.2f} m³/s")
-            m2.metric("📦 Dung tích phòng lũ sử dụng lớn nhất (Vsc)", f"{df_b2['Vsc (10⁶m³)'].max():.3f} x10⁶ m³")
+            m1.metric("🌊 Mực nước lớn nhất (Zsc_max)", f"{df_b2['Zsc (m)'].max():.3f} m")
+            m1.metric("📏 Cột nước tràn lớn nhất (Htr_max)", f"{df_b2['Htr (m)'].max():.3f} m")
+            m2.metric("🌪️ Lưu lượng xả lớn nhất (Qxả_max)", f"{df_b2['q_cuoi (m³/s)'].max():.3f} m³/s")
+            m2.metric("📦 Dung tích phòng lũ lớn nhất (Vsc)", f"{df_b2['Vsc (10⁶m³)'].max():.3f} x10⁶ m³")
             st.markdown("</div>", unsafe_allow_html=True)
